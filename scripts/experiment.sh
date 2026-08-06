@@ -13,7 +13,9 @@ EXP="${1:?usage: experiment.sh e1|e2|e3}"
 REGION="${REGION:-eu-west-1}"
 IMAGE="${IMAGE:-ghcr.io/c4geeks/rollouts-demo}"
 RPS="${RPS:-50}"
-DURATION="${DURATION:-8m}"
+# e1 walks all four gates; e2 aborts in ~2 min; e3 is a plain rolling update.
+case "${1:-}" in e1) DEFAULT_DURATION=12m ;; *) DEFAULT_DURATION=6m ;; esac
+DURATION="${DURATION:-$DEFAULT_DURATION}"
 OUT="results/${EXP}"
 K6_VERSION="${K6_VERSION:-2.1.0}"
 
@@ -42,9 +44,12 @@ collect_load() {
   echo "waiting for k6 to finish..."
   kubectl wait --for=condition=complete job/"${job}" -n loadtest --timeout=20m >/dev/null
   kubectl logs -n loadtest job/"${job}" --tail=-1 > "${OUT}/k6.log"
-  local pod
-  pod="$(kubectl get pod -n loadtest -l job-name="${job}" -o jsonpath='{.items[0].metadata.name}')"
-  kubectl cp -n loadtest "${pod}:/results/summary.json" "${OUT}/k6-summary.json" 2>/dev/null || true
+  # kubectl cp needs a running container, and by now the job has finished, so
+  # the summary comes back out of the log instead.
+  sed -n '/---SUMMARY-JSON-BEGIN---/,/---SUMMARY-JSON-END---/p' "${OUT}/k6.log" \
+    | sed '1d;$d' > "${OUT}/k6-summary.json"
+  python3 -m json.tool "${OUT}/k6-summary.json" >/dev/null 2>&1 \
+    || echo "warning: could not recover summary JSON from ${OUT}/k6.log" >&2
 }
 
 banner() { printf '\n\033[1;33m### %s\033[0m\n' "$*"; }

@@ -12,6 +12,9 @@ metadata:
     alb.ingress.kubernetes.io/group.order: {{ .Values.ingress.groupOrder | quote }}
     alb.ingress.kubernetes.io/healthcheck-path: {{ .Values.ingress.healthcheckPath }}
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "5"
+    # ALB rejects the target group unless timeout < interval, and the default
+    # timeout is also 5. Leaving this out fails with a ValidationError.
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "2"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:

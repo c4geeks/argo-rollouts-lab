@@ -39,7 +39,7 @@ analysis:
   enabled: true
   interval: 20s
   count: 3
-  initialDelay: 20s
+  initialDelay: 30s
   failureLimit: 0
   successRateThreshold: 0.95
   p95LatencySeconds: 0.5

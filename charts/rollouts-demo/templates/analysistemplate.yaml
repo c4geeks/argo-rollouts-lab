@@ -14,14 +14,16 @@ spec:
       count: {{ .Values.analysis.count }}
       initialDelay: {{ .Values.analysis.initialDelay }}
       failureLimit: {{ .Values.analysis.failureLimit }}
-      successCondition: len(result) > 0 && result[0] >= {{ .Values.analysis.successRateThreshold }}
+      successCondition: len(result) == 0 || result[0] >= {{ .Values.analysis.successRateThreshold }}
       provider:
         prometheus:
           address: {{ .Values.analysis.prometheusAddress }}
           query: |
-            sum(rate(demo_http_requests_total{service="{{ "{{args.canary-service}}" }}",code!~"5.."}[30s]))
-            /
-            sum(rate(demo_http_requests_total{service="{{ "{{args.canary-service}}" }}"}[30s]))
+            1 - (
+              (sum(rate(demo_http_requests_total{service="{{ "{{args.canary-service}}" }}",code=~"5.."}[30s])) or vector(0))
+              /
+              clamp_min(sum(rate(demo_http_requests_total{service="{{ "{{args.canary-service}}" }}"}[30s])), 1)
+            )
     - name: p95-latency
       interval: {{ .Values.analysis.interval }}
       count: {{ .Values.analysis.count }}

@@ -114,11 +114,26 @@ helm repo update >/dev/null
 
 # ------------------------------------------------------------------------------
 say "AWS Load Balancer Controller (chart ${LBC_CHART}, app v${LBC_APP})"
+
+# Managed nodegroups ship with an IMDS hop limit of 1, so a pod on the pod
+# network cannot reach instance metadata. Left to discover its own VPC the
+# controller crashloops with:
+#
+#   unable to initialize AWS cloud ... failed to fetch VPC ID from instance
+#   metadata ... context deadline exceeded
+#
+# Passing region and vpcId explicitly removes the IMDS dependency entirely.
+# Raising the nodegroup hop limit to 2 also works, but this is the smaller change.
+VPC_ID="${VPC_ID:-$(aws eks describe-cluster --name "${CLUSTER}" --region "${REGION}" \
+  --query 'cluster.resourcesVpcConfig.vpcId' --output text)}"
+echo "vpcId=${VPC_ID}"
+
 helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
   --namespace kube-system \
   --version "${LBC_CHART}" \
   --set clusterName="${CLUSTER}" \
   --set region="${REGION}" \
+  --set vpcId="${VPC_ID}" \
   --set serviceAccount.create=true \
   --set serviceAccount.name=aws-load-balancer-controller \
   --wait --timeout 5m

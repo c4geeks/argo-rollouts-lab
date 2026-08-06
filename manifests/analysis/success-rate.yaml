@@ -4,6 +4,17 @@
 # controller shifts 100% of traffic back to the stable ReplicaSet. That is
 # deliberate for the lab: it makes the blast radius measurable. Production
 # values usually allow 1-2 failures to absorb a noisy scrape.
+#
+# The query is written as "1 minus the error ratio" rather than the more obvious
+# success ratio, because the obvious version breaks:
+#
+#   sum(rate(ok[30s])) / sum(rate(all[30s]))
+#
+# A canary that has not been sent any traffic yet evaluates that as 0/0 = NaN,
+# NaN fails `>= 0.95`, and a perfectly healthy release gets rolled back on its
+# first measurement. clamp_min on the denominator keeps an idle canary reading
+# as healthy, and `len(result) == 0` covers the earlier window where the pods
+# exist but have not exported a single counter yet.
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
@@ -16,20 +27,22 @@ spec:
     - name: success-rate
       interval: 20s
       count: 3
-      initialDelay: 20s
+      initialDelay: 30s
       failureLimit: 0
-      successCondition: len(result) > 0 && result[0] >= 0.95
+      successCondition: len(result) == 0 || result[0] >= 0.95
       provider:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
           query: |
-            sum(rate(demo_http_requests_total{service="{{args.canary-service}}",code!~"5.."}[30s]))
-            /
-            sum(rate(demo_http_requests_total{service="{{args.canary-service}}"}[30s]))
+            1 - (
+              (sum(rate(demo_http_requests_total{service="{{args.canary-service}}",code=~"5.."}[30s])) or vector(0))
+              /
+              clamp_min(sum(rate(demo_http_requests_total{service="{{args.canary-service}}"}[30s])), 1)
+            )
     - name: p95-latency
       interval: 20s
       count: 3
-      initialDelay: 20s
+      initialDelay: 30s
       failureLimit: 1
       successCondition: len(result) == 0 || result[0] <= 0.5
       provider:

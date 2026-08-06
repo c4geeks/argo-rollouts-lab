@@ -46,31 +46,51 @@ def blast_radius():
 
 def alb_lag():
     """For each weight change, the seconds between the Ingress annotation
-    carrying the new weight and the ALB listener rule serving it."""
+    carrying the new weight and the ALB listener rule actually serving it.
+
+    Input is the long-format log the sampler writes: ts,source,weight.
+    """
     out = {}
     for exp in sorted(os.listdir(RESULTS)):
         path = os.path.join(RESULTS, exp, "weights.csv")
         if not os.path.exists(path):
             continue
         with open(path) as fh:
-            samples = [r for r in csv.DictReader(fh)]
+            rows = list(csv.DictReader(fh))
 
-        lags, pending = [], {}
-        for r in samples:
+        if not rows:
+            continue
+        # The sampler's own first read of each source is initial state, not a
+        # change. Anything in the opening seconds of the log is discarded or the
+        # poll interval itself gets reported as ALB latency.
+        log_start = min(float(r["ts"]) for r in rows)
+        rows = [r for r in rows if float(r["ts"]) > log_start + 5]
+
+        first = {}   # (source, weight) -> earliest timestamp
+        for r in rows:
+            key = (r["source"], r["weight"])
             ts = float(r["ts"])
-            ing = r["ingress"]
-            alb = r["alb"]
-            if ing and ing not in pending and ing != alb:
-                pending[ing] = ts                      # annotation moved first
-            if alb and alb in pending:
-                lags.append(round(ts - pending.pop(alb), 1))
+            if key not in first or ts < first[key]:
+                first[key] = ts
+
+        lags = []
+        for (source, weight), ts in first.items():
+            if source != "ingress":
+                continue
+            alb_ts = first.get(("alb", weight))
+            # Only count changes where we saw the annotation move first; the
+            # very first sample of each source is just initial state.
+            if alb_ts and alb_ts > ts:
+                lags.append((int(weight), round(alb_ts - ts, 1)))
 
         if lags:
+            lags.sort()
+            values = [v for _, v in lags]
             out[exp] = {
-                "changes": len(lags),
-                "min": min(lags),
-                "median": round(statistics.median(lags), 1),
-                "max": max(lags),
+                "changes": len(values),
+                "min": min(values),
+                "median": round(statistics.median(values), 1),
+                "max": max(values),
                 "all": lags,
             }
     return out

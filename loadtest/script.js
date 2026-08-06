@@ -16,8 +16,14 @@ import { Counter } from 'k6/metrics';
 
 const responses = new Counter('responses_by_version');
 const failures = new Counter('failures_by_version');
+const byStatus = new Counter('failures_by_status');
 
 const VERSIONS = ['v1', 'v2', 'v3', 'unknown'];
+// 0 is a transport-level failure (connection reset), which is what an ALB
+// deregistering a target looks like from the client. Distinguishing it from a
+// real application 500 is the difference between blaming the release and
+// blaming the load balancer.
+const STATUSES = ['0', '500', '502', '503', '504'];
 
 export const options = {
   scenarios: {
@@ -37,7 +43,7 @@ export const options = {
     VERSIONS.flatMap((v) => [
       [`responses_by_version{version:${v}}`, ['count>=0']],
       [`failures_by_version{version:${v}}`, ['count>=0']],
-    ])
+    ]).concat(STATUSES.map((c) => [`failures_by_status{code:${c}}`, ['count>=0']]))
   ),
 };
 
@@ -51,14 +57,15 @@ export default function () {
   responses.add(1, { version });
   if (res.status === 0 || res.status >= 500) {
     failures.add(1, { version });
+    byStatus.add(1, { code: String(res.status) });
   }
 
   check(res, { 'status 200': (r) => r.status === 200 });
 }
 
 export function handleSummary(data) {
-  const pick = (metric, version) => {
-    const m = data.metrics[`${metric}{version:${version}}`];
+  const pick = (metric, value, tag = 'version') => {
+    const m = data.metrics[`${metric}{${tag}:${value}}`];
     return m && m.values ? m.values.count || 0 : 0;
   };
 
@@ -85,6 +92,9 @@ export function handleSummary(data) {
     http_req_duration_p95_ms: Number(
       (data.metrics.http_req_duration?.values?.['p(95)'] || 0).toFixed(1)
     ),
+    failures_by_status: Object.fromEntries(
+      STATUSES.map((c) => [c, pick('failures_by_status', c, 'code')]).filter(([, n]) => n > 0)
+    ),
   };
 
   const lines = [
@@ -101,6 +111,11 @@ export function handleSummary(data) {
         `${String(r.share_pct).padStart(6)}%   ${String(r.failures).padStart(8)}`
     );
   }
+  lines.push('');
+
+  lines.push('---SUMMARY-JSON-BEGIN---');
+  lines.push(JSON.stringify(report));
+  lines.push('---SUMMARY-JSON-END---');
   lines.push('');
 
   return {
