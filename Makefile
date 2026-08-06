@@ -1,6 +1,6 @@
 # Argo Rollouts progressive-delivery lab
 #
-#   make cluster        create the EKS cluster (eksctl)
+#   make cluster        create the VPC and EKS cluster (terragrunt)
 #   make platform       install LB controller, Argo Rollouts, Argo CD, Prometheus
 #   make deploy         apply the Kustomize path
 #   make deploy-helm    apply the Helm path
