@@ -81,7 +81,20 @@ of the image rather than something the manifest toggles:
 | `v2` | green | 0% |
 | `v3` | red | 10% |
 
-Rebuild them yourself with `make -C app push`.
+If the published package is not readable from your cluster, build and push your
+own, then repoint the manifests in one place:
+
+```bash
+make -C app push IMAGE=your-registry.example.com/rollouts-demo
+
+cd manifests/base
+kustomize edit set image \
+  ghcr.io/c4geeks/rollouts-demo=your-registry.example.com/rollouts-demo
+```
+
+A private registry also needs an `imagePullSecrets` entry and a matching
+`docker-registry` secret in the `demo` and `demo-control` namespaces;
+`platform/install.sh` creates one from `GHCR_TOKEN` if that variable is set.
 
 ## Licence
 

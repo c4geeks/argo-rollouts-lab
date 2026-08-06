@@ -77,9 +77,13 @@ ensure_association() {
 ensure_role CFGLabLBCRole "${POLICY_ARN}"
 ensure_association kube-system aws-load-balancer-controller CFGLabLBCRole
 
-# Argo Rollouts needs its own read-only ELB permissions for --aws-verify-target-group,
-# which makes the controller confirm a weight change actually landed in AWS before
-# it advances to the next canary step.
+# Argo Rollouts needs its own read-only ELB permissions for target-group
+# verification, which makes the controller confirm a weight change actually
+# landed in AWS before it advances to the next canary step. It also needs
+# AWS_REGION set explicitly (see the helm install below): Pod Identity injects
+# credentials but no region, and a hop-limit-1 nodegroup blocks the IMDS
+# fallback. Without either, the controller logs a WeightVerifyError warning and
+# continues with the canary UNVERIFIED rather than failing loudly.
 ROLLOUTS_POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/CFGLabRolloutsELBReadPolicy"
 if ! aws iam get-policy --policy-arn "${ROLLOUTS_POLICY_ARN}" >/dev/null 2>&1; then
   cat >/tmp/rollouts-elb-policy.json <<'JSON'
@@ -145,6 +149,8 @@ helm upgrade --install argo-rollouts argo/argo-rollouts \
   --version "${ROLLOUTS_CHART}" \
   --set dashboard.enabled=true \
   --set controller.awsVerifyTargetGroup=true \
+  --set controller.extraEnv[0].name=AWS_REGION \
+  --set controller.extraEnv[0].value="${REGION}" \
   --wait --timeout 5m
 
 # ------------------------------------------------------------------------------

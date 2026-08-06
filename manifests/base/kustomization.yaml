@@ -2,9 +2,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: demo
 resources:
-  - namespace.yaml
-  - services.yaml
-  - ingress.yaml
-  - servicemonitors.yaml
-  - rollout.yaml
-  - ../analysis
+- namespace.yaml
+- services.yaml
+- ingress.yaml
+- servicemonitors.yaml
+- rollout.yaml
+- ../analysis
+images:
+- name: ghcr.io/c4geeks/rollouts-demo
+  newName: ghcr.io/c4geeks/rollouts-demo
