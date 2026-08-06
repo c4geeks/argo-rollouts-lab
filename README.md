@@ -81,16 +81,21 @@ of the image rather than something the manifest toggles:
 | `v2` | green | 0% |
 | `v3` | red | 10% |
 
-If the published package is not readable from your cluster, build and push your
-own, then repoint the manifests in one place:
+The images are public, so nothing needs building to run the lab. To use your own
+registry instead, build and push, then repoint all three consumers:
 
 ```bash
 make -C app push IMAGE=your-registry.example.com/rollouts-demo
 
-cd manifests/base
-kustomize edit set image \
-  ghcr.io/c4geeks/rollouts-demo=your-registry.example.com/rollouts-demo
+(cd manifests/base    && kustomize edit set image ghcr.io/c4geeks/rollouts-demo=your-registry.example.com/rollouts-demo)
+(cd manifests/control && kustomize edit set image ghcr.io/c4geeks/rollouts-demo=your-registry.example.com/rollouts-demo)
+
+sed -i "s|repository: ghcr.io/c4geeks/rollouts-demo|repository: your-registry.example.com/rollouts-demo|" \
+  charts/rollouts-demo/values.yaml
 ```
+
+The `gitops/` Applications render from Git, so that path needs the edits committed
+to a fork with `repoURL` pointed at it.
 
 A private registry also needs an `imagePullSecrets` entry and a matching
 `docker-registry` secret in the `demo` and `demo-control` namespaces;
