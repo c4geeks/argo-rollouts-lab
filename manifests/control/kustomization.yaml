@@ -2,3 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - deployment.yaml
+
+# Repoint alongside manifests/base if you built the demo images yourself:
+#   kustomize edit set image ghcr.io/c4geeks/rollouts-demo=your-registry/rollouts-demo
+images:
+  - name: ghcr.io/c4geeks/rollouts-demo
+    newName: ghcr.io/c4geeks/rollouts-demo

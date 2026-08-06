@@ -149,8 +149,8 @@ helm upgrade --install argo-rollouts argo/argo-rollouts \
   --version "${ROLLOUTS_CHART}" \
   --set dashboard.enabled=true \
   --set controller.awsVerifyTargetGroup=true \
-  --set controller.extraEnv[0].name=AWS_REGION \
-  --set controller.extraEnv[0].value="${REGION}" \
+  --set 'controller.extraEnv[0].name=AWS_REGION' \
+  --set "controller.extraEnv[0].value=${REGION}" \
   --wait --timeout 5m
 
 # ------------------------------------------------------------------------------
