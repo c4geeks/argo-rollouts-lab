@@ -31,7 +31,7 @@ const indexHTML = `<!doctype html>
 </head>
 <body>
 <header>
-  <h1>Argo Rollouts &mdash; live traffic</h1>
+  <h1>Live traffic &mdash; <span id="host"></span></h1>
   <div class="sub">Each tile is one response through the load balancer, newest first.</div>
 </header>
 <div class="stats" id="stats"></div>
@@ -41,6 +41,7 @@ const MAX = 600;
 const tiles = [];
 const counts = new Map();
 let errors = 0, total = 0;
+document.getElementById('host').textContent = location.host;
 const grid = document.getElementById('grid');
 const stats = document.getElementById('stats');
 
