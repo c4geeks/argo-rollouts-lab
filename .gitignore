@@ -1,0 +1,4 @@
+results/
+*.tfstate*
+.terragrunt-cache/
+.terraform/

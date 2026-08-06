@@ -1,0 +1,108 @@
+# E3 control group: the same application, the same bad image, shipped the way
+# most teams ship today. A plain Deployment with maxSurge/maxUnavailable and no
+# analysis. Nothing here watches error rate, so nothing here stops.
+#
+# Shares the lab ALB through the same IngressGroup so the comparison against the
+# Rollout is measured under identical load-balancer conditions.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-control
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-demo
+  namespace: demo-control
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: control-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: control-demo
+    spec:
+      imagePullSecrets:
+        - name: ghcr
+      containers:
+        - name: demo
+          image: ghcr.io/c4geeks/rollouts-demo:v1
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-demo
+  namespace: demo-control
+  labels:
+    app: control-demo
+spec:
+  selector:
+    app: control-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: control-demo
+  namespace: demo-control
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: control-demo
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 5s
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: control-demo
+  namespace: demo-control
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: cfg-lab
+    alb.ingress.kubernetes.io/group.order: "20"
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "5"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: control.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: control-demo
+                port:
+                  number: 80

@@ -1,0 +1,60 @@
+image:
+  repository: ghcr.io/c4geeks/rollouts-demo
+  tag: v1
+  pullPolicy: IfNotPresent
+  pullSecret: ghcr
+
+replicas: 4
+
+service:
+  port: 80
+
+ingress:
+  enabled: true
+  className: alb
+  host: demo.example.com
+  groupName: cfg-lab
+  groupOrder: 10
+  healthcheckPath: /healthz
+
+# The whole point of the Helm path: the canary shape is data, not structure.
+# A dev cluster can ship [50, full] while prod ships [5, 20, 50, 80] and both
+# render from the same template.
+#
+#   weight    percentage of traffic sent to the canary ReplicaSet
+#   pause     optional duration to hold before the next step
+#   analysis  true runs the success-rate gate and aborts the rollout if it fails
+canary:
+  steps:
+    - weight: 20
+      analysis: true
+    - weight: 40
+      analysis: true
+    - weight: 60
+      analysis: true
+    - weight: 80
+      analysis: true
+
+analysis:
+  enabled: true
+  interval: 20s
+  count: 3
+  initialDelay: 20s
+  failureLimit: 0
+  successRateThreshold: 0.95
+  p95LatencySeconds: 0.5
+  prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: 5s
+    # Label kube-prometheus-stack uses to adopt ServiceMonitors.
+    releaseLabel: kube-prometheus-stack
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

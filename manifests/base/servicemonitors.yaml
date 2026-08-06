@@ -1,0 +1,36 @@
+# Separate ServiceMonitors for stable and canary. The Prometheus Operator adds a
+# "service" label from the selected Service name, which is what lets the
+# AnalysisTemplate ask about the canary pods alone rather than the whole app.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rollouts-demo-stable
+  namespace: demo
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: rollouts-demo
+      role: stable
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 5s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rollouts-demo-canary
+  namespace: demo
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: rollouts-demo
+      role: canary
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 5s

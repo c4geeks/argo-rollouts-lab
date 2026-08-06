@@ -1,0 +1,17 @@
+{{- range $role := list "root" "stable" "canary" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rollouts-demo.fullname" $ }}-{{ $role }}
+  labels:
+    {{- include "rollouts-demo.selectorLabels" $ | nindent 4 }}
+    role: {{ $role }}
+spec:
+  selector:
+    {{- include "rollouts-demo.selectorLabels" $ | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $.Values.service.port }}
+      targetPort: http
+{{- end }}

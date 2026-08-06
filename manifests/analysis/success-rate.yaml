@@ -1,0 +1,41 @@
+# The gate every canary step must pass.
+#
+# failureLimit: 0 means a single bad measurement aborts the rollout and the
+# controller shifts 100% of traffic back to the stable ReplicaSet. That is
+# deliberate for the lab: it makes the blast radius measurable. Production
+# values usually allow 1-2 failures to absorb a noisy scrape.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: demo
+spec:
+  args:
+    - name: canary-service
+  metrics:
+    - name: success-rate
+      interval: 20s
+      count: 3
+      initialDelay: 20s
+      failureLimit: 0
+      successCondition: len(result) > 0 && result[0] >= 0.95
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(demo_http_requests_total{service="{{args.canary-service}}",code!~"5.."}[30s]))
+            /
+            sum(rate(demo_http_requests_total{service="{{args.canary-service}}"}[30s]))
+    - name: p95-latency
+      interval: 20s
+      count: 3
+      initialDelay: 20s
+      failureLimit: 1
+      successCondition: len(result) == 0 || result[0] <= 0.5
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(demo_http_request_duration_seconds_bucket{service="{{args.canary-service}}"}[30s]))
+              by (le))

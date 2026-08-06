@@ -1,0 +1,38 @@
+# The Rollout and the control Deployment share ONE ALB via an IngressGroup, so
+# both experiments run behind identical load-balancer conditions (and the lab
+# only pays for a single ALB).
+#
+# The "use-annotation" port name is the contract with the AWS Load Balancer
+# Controller: it means "ignore this backend, read the forward action out of the
+# alb.ingress.kubernetes.io/actions.<service> annotation instead". Argo Rollouts
+# owns that annotation and rewrites the weights on every canary step.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rollouts-demo
+  namespace: demo
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: cfg-lab
+    alb.ingress.kubernetes.io/group.order: "10"
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/load-balancer-attributes: >-
+      deletion_protection.enabled=false,
+      idle_timeout.timeout_seconds=60
+spec:
+  ingressClassName: alb
+  rules:
+    - host: demo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rollouts-demo-root
+                port:
+                  name: use-annotation

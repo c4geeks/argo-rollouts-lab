@@ -1,0 +1,60 @@
+# Trimmed for a short-lived lab: no alerting, no persistence, fast scrapes.
+# A 5s global scrape interval matters here. The canary analysis queries a 30s
+# rate window, and with the default 30s scrape that window holds a single
+# sample, which makes rate() unstable right when the gate needs to be decisive.
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: rollouts-lab
+  defaultDashboardsEnabled: false
+  service:
+    type: ClusterIP
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 5s
+    evaluationInterval: 15s
+    retention: 6h
+    # Adopt ServiceMonitors from every namespace rather than only those matching
+    # the chart's own release selector.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 640Mi
+      limits:
+        memory: 1536Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+
+# Control-plane scrape targets EKS does not expose to us.
+kubeApiServer:
+  enabled: true
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false

@@ -1,0 +1,26 @@
+# WAY 1 delivered by Argo CD: plain Kustomize.
+#
+# Argo CD ships a built-in health check for argoproj.io/Rollout, so the
+# Application sits in Progressing for as long as the canary is stepping and only
+# reports Healthy once the rollout is fully promoted. That is what makes a
+# Rollout safe to drive from GitOps: sync does not mean shipped.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rollouts-demo-kustomize
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/c4geeks/argo-rollouts-lab.git
+    targetRevision: main
+    path: manifests/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false   # leave false: selfHeal fights `kubectl argo rollouts set image`
+    syncOptions:
+      - CreateNamespace=true

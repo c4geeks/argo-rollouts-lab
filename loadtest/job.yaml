@@ -1,0 +1,43 @@
+# Rendered by `make load` with envsubst. Runs k6 inside the cluster so the load
+# path is pod -> ALB -> pod, the same path a real client takes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${JOB_NAME}
+  namespace: loadtest
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:${K6_VERSION}
+          args: ["run", "/scripts/script.js"]
+          env:
+            - name: TARGET
+              value: "${TARGET}"
+            - name: HOST
+              value: "${HOST}"
+            - name: RPS
+              value: "${RPS}"
+            - name: DURATION
+              value: "${DURATION}"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: results
+              mountPath: /results
+          resources:
+            requests:
+              cpu: 300m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: scripts
+          configMap:
+            name: k6-script
+        - name: results
+          emptyDir: {}

@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "rollouts-demo.fullname" . }}
+  labels:
+    {{- include "rollouts-demo.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "rollouts-demo.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rollouts-demo.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ . }}
+      {{- end }}
+      containers:
+        - name: demo
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+  strategy:
+    canary:
+      canaryService: {{ include "rollouts-demo.fullname" . }}-canary
+      stableService: {{ include "rollouts-demo.fullname" . }}-stable
+      {{- if .Values.ingress.enabled }}
+      trafficRouting:
+        alb:
+          ingress: {{ include "rollouts-demo.fullname" . }}
+          rootService: {{ include "rollouts-demo.fullname" . }}-root
+          servicePort: {{ .Values.service.port }}
+      {{- end }}
+      steps:
+        {{- range .Values.canary.steps }}
+        - setWeight: {{ .weight }}
+        {{- if .pause }}
+        - pause: { duration: {{ .pause }} }
+        {{- end }}
+        {{- if and .analysis $.Values.analysis.enabled }}
+        - analysis:
+            templates:
+              - templateName: {{ include "rollouts-demo.fullname" $ }}-success-rate
+            args:
+              - name: canary-service
+                value: {{ include "rollouts-demo.fullname" $ }}-canary
+        {{- end }}
+        {{- end }}

@@ -1,0 +1,21 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- range $role := list "stable" "canary" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "rollouts-demo.fullname" $ }}-{{ $role }}
+  labels:
+    {{- include "rollouts-demo.labels" $ | nindent 4 }}
+    release: {{ $.Values.metrics.serviceMonitor.releaseLabel }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "rollouts-demo.selectorLabels" $ | nindent 6 }}
+      role: {{ $role }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ $.Values.metrics.serviceMonitor.interval }}
+{{- end }}
+{{- end }}

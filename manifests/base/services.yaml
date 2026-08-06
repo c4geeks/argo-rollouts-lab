@@ -1,0 +1,56 @@
+# Three services, all selecting the same app label.
+#
+#   root    the Ingress points here with port name "use-annotation"; the ALB
+#           controller reads the weights out of the annotation the Rollout writes
+#   stable  Argo Rollouts pins this to the stable ReplicaSet's pod-template-hash
+#   canary  same, for the canary ReplicaSet
+#
+# stable and canary each get their own ALB target group, which is what makes
+# weighted traffic splitting possible.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollouts-demo-root
+  namespace: demo
+  labels:
+    app: rollouts-demo
+    role: root
+spec:
+  selector:
+    app: rollouts-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollouts-demo-stable
+  namespace: demo
+  labels:
+    app: rollouts-demo
+    role: stable
+spec:
+  selector:
+    app: rollouts-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollouts-demo-canary
+  namespace: demo
+  labels:
+    app: rollouts-demo
+    role: canary
+spec:
+  selector:
+    app: rollouts-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

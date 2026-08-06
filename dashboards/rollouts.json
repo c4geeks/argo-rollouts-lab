@@ -1,0 +1,123 @@
+{
+  "title": "Argo Rollouts - canary traffic and errors",
+  "uid": "argo-rollouts-lab",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests per second by version",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 25, "lineWidth": 2, "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Traffic share by version (%)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "min": 0,
+          "custom": { "fillOpacity": 30, "lineWidth": 2, "stacking": { "mode": "percent" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])) / ignoring(version) group_left sum(rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error rate by version (5xx as % of that version's traffic)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": { "fillOpacity": 15, "lineWidth": 2 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo\",code=~\"5..\"}[30s])) / sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Canary success rate as the analysis sees it (gate at 0.95)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0.8,
+          "max": 1.01,
+          "custom": { "fillOpacity": 10, "lineWidth": 2 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(demo_http_requests_total{service=\"rollouts-demo-canary\",code!~\"5..\"}[30s])) / sum(rate(demo_http_requests_total{service=\"rollouts-demo-canary\"}[30s]))",
+          "legendFormat": "canary success rate",
+          "refId": "A"
+        },
+        {
+          "expr": "vector(0.95)",
+          "legendFormat": "abort threshold",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Control group (plain Deployment) error rate",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": { "fillOpacity": 15, "lineWidth": 2 }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo-control\",code=~\"5..\"}[30s])) / sum by (version) (rate(demo_http_requests_total{namespace=\"demo-control\"}[30s]))",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

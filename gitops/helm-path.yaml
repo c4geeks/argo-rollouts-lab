@@ -1,0 +1,40 @@
+# WAY 2 delivered by Argo CD: the same Rollout, rendered from the chart.
+#
+# valuesObject keeps the environment's canary shape in the Application manifest
+# rather than in a separate values file, so `argocd app diff` shows a reviewer
+# exactly which steps changed when someone edits the release strategy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rollouts-demo-helm
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/c4geeks/argo-rollouts-lab.git
+    targetRevision: main
+    path: charts/rollouts-demo
+    helm:
+      releaseName: rollouts-demo
+      valuesObject:
+        image:
+          tag: v1
+        canary:
+          steps:
+            - weight: 20
+              analysis: true
+            - weight: 40
+              analysis: true
+            - weight: 60
+              analysis: true
+            - weight: 80
+              analysis: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
