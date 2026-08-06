@@ -1,0 +1,54 @@
+name: build-images
+
+# Publishes the three demo images. Building here rather than from a laptop is
+# what links the package to this repository, which is what lets it inherit the
+# repository's public visibility.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - tag: v1
+            color: '#2563eb'
+            error_rate: '0'
+          - tag: v2
+            color: '#16a34a'
+            error_rate: '0'
+          - tag: v3
+            color: '#dc2626'
+            error_rate: '10'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rollouts-demo:${{ matrix.tag }}
+          build-args: |
+            VERSION=${{ matrix.tag }}
+            COLOR=${{ matrix.color }}
+            ERROR_RATE=${{ matrix.error_rate }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
