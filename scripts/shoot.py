@@ -30,6 +30,11 @@ def main():
     ap.add_argument("--full", action="store_true")
     ap.add_argument("--wait-selector")
     ap.add_argument("--height", type=int)
+    ap.add_argument("--width", type=int)
+    ap.add_argument("--login-user")
+    ap.add_argument("--login-pass")
+    ap.add_argument("--url-after")
+    ap.add_argument("--basic-auth", help="user:pass, sent as an Authorization header")
     args = ap.parse_args()
 
     launch_args = []
@@ -48,9 +53,29 @@ def main():
         viewport = dict(GRID_VIEWPORT if args.mode == "grid" else VIEWPORT)
         if args.height:
             viewport["height"] = args.height
-        page = browser.new_context(viewport=viewport,
-                                   device_scale_factor=2).new_page()
+        if args.width:
+            viewport["width"] = args.width
+        ctx_args = {"viewport": viewport, "device_scale_factor": 2}
+        if args.basic_auth:
+            user, _, pw = args.basic_auth.partition(":")
+            ctx_args["http_credentials"] = {"username": user, "password": pw}
+        page = browser.new_context(**ctx_args).new_page()
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        if args.login_user:
+            # Both UIs render the form client-side, so wait for it to exist
+            # before touching it. Argo CD names the field "username",
+            # Grafana names it "user".
+            page.wait_for_selector("input[name='password']", timeout=30000)
+            for sel in ("input[name='username']", "input[name='user']"):
+                if page.locator(sel).count():
+                    page.fill(sel, args.login_user)
+                    break
+            page.fill("input[name='password']", args.login_pass)
+            page.click("button[type='submit']")
+            # The Argo CD UI polls continuously, so networkidle never fires.
+            page.wait_for_timeout(8000)
+            if args.url_after:
+                page.goto(args.url_after, wait_until="domcontentloaded", timeout=60000)
         if args.wait_selector:
             page.wait_for_selector(args.wait_selector, timeout=60000)
         # The tile grid fills itself by polling, so it needs real wall-clock

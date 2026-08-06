@@ -3,23 +3,85 @@
   "uid": "argo-rollouts-lab",
   "schemaVersion": 39,
   "refresh": "5s",
-  "time": { "from": "now-15m", "to": "now" },
-  "templating": { "list": [] },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
   "panels": [
     {
       "type": "timeseries",
       "title": "Requests per second by version",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": { "fillOpacity": 25, "lineWidth": 2, "stacking": { "mode": "normal" } }
+          "custom": {
+            "fillOpacity": 25,
+            "lineWidth": 2,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
-          "expr": "sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "expr": "sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -28,19 +90,75 @@
     {
       "type": "timeseries",
       "title": "Traffic share by version (%)",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "max": 100,
+          "unit": "reqps",
           "min": 0,
-          "custom": { "fillOpacity": 30, "lineWidth": 2, "stacking": { "mode": "percent" } }
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "stacking": {
+              "mode": "percent"
+            }
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
-          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])) / ignoring(version) group_left sum(rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "expr": "sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -49,25 +167,85 @@
     {
       "type": "timeseries",
       "title": "Error rate by version (5xx as % of that version's traffic)",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
-          "custom": { "fillOpacity": 15, "lineWidth": 2 },
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "v3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
-          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo\",code=~\"5..\"}[30s])) / sum by (version) (rate(demo_http_requests_total{namespace=\"demo\"}[30s]))",
+          "expr": "100 * sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -76,13 +254,21 @@
     {
       "type": "timeseries",
       "title": "Canary success rate as the analysis sees it (gate at 0.95)",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
           "min": 0.8,
           "max": 1.01,
-          "custom": { "fillOpacity": 10, "lineWidth": 2 }
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2
+          }
         },
         "overrides": []
       },
@@ -102,18 +288,26 @@
     {
       "type": "timeseries",
       "title": "Control group (plain Deployment) error rate",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "min": 0,
-          "custom": { "fillOpacity": 15, "lineWidth": 2 }
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "expr": "100 * sum by (version) (rate(demo_http_requests_total{namespace=\"demo-control\",code=~\"5..\"}[30s])) / sum by (version) (rate(demo_http_requests_total{namespace=\"demo-control\"}[30s]))",
+          "expr": "100 * sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo-control\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo-control\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
