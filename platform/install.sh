@@ -144,7 +144,7 @@ helm upgrade --install argo-rollouts argo/argo-rollouts \
   --namespace argo-rollouts --create-namespace \
   --version "${ROLLOUTS_CHART}" \
   --set dashboard.enabled=true \
-  --set controller.extraArgs[0]=--aws-verify-target-group \
+  --set controller.awsVerifyTargetGroup=true \
   --wait --timeout 5m
 
 # ------------------------------------------------------------------------------

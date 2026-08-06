@@ -52,3 +52,4 @@ spec:
             histogram_quantile(0.95,
               sum(rate(demo_http_request_duration_seconds_bucket{service="{{args.canary-service}}"}[30s]))
               by (le))
+            and on() (sum(rate(demo_http_requests_total{service="{{args.canary-service}}"}[30s])) > 0)

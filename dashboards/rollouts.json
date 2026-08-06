@@ -81,7 +81,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
+          "expr": "sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -158,7 +158,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
+          "expr": "sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -245,7 +245,7 @@
       },
       "targets": [
         {
-          "expr": "100 * sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
+          "expr": "100 * sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
@@ -307,7 +307,7 @@
       },
       "targets": [
         {
-          "expr": "100 * sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo-control\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod) (rate(demo_http_requests_total{namespace=\"demo-control\"}[30s])))",
+          "expr": "100 * sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo-control\",code=~\"5..\"}[30s]))) / sum by (version) (max by (version, pod, path, code) (rate(demo_http_requests_total{namespace=\"demo-control\"}[30s])))",
           "legendFormat": "{{version}}",
           "refId": "A"
         }
